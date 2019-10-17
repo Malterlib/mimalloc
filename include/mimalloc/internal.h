@@ -111,7 +111,6 @@ static inline uintptr_t _mi_random_shuffle(uintptr_t x);
 extern mi_decl_hidden mi_decl_cache_align const mi_page_t  _mi_page_empty;
 void          _mi_process_load(void);
 
-void mi_cdecl _mi_process_done(void);
 bool          _mi_is_redirected(void);
 bool          _mi_allocator_init(const char** message);
 void          _mi_allocator_done(void);
