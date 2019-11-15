@@ -871,10 +871,10 @@ static void NTAPI mi_win_main(PVOID module, DWORD reason, LPVOID reserved) {
   MI_UNUSED(reserved);
   MI_UNUSED(module);
   if (reason==DLL_PROCESS_ATTACH) {
-    _mi_auto_process_init();
+    //_mi_auto_process_init();
   }
   else if (reason==DLL_PROCESS_DETACH) {
-    _mi_auto_process_done();
+    //_mi_auto_process_done();
   }
   else if (reason==DLL_THREAD_DETACH && !_mi_is_redirected()) {
     _mi_thread_done(NULL);
@@ -1210,7 +1210,7 @@ extern "C" {
 
     static int mi_cdecl mi_crt_init(void) {
       mi_win_main(NULL,DLL_PROCESS_ATTACH,NULL);
-      atexit(&_mi_auto_process_done);
+      //atexit(&_mi_auto_process_done);
       return 0;
     }
 

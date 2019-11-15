@@ -42,20 +42,20 @@ terms of the MIT license. A copy of the license can be found in the file
     #define mi_attr_destructor  __attribute__((destructor))
   #endif
   static void mi_attr_constructor mi_process_attach(void) {
-    _mi_auto_process_init();
+    //_mi_auto_process_init();
   }
   static void mi_attr_destructor mi_process_detach(void) {
-    _mi_auto_process_done();
+    //_mi_auto_process_done();
   }
 #elif defined(__cplusplus)
   // C++: use static initialization to detect process start/end
   // This is not guaranteed to be first/last but the best we can generally do?
   struct mi_init_done_t {
     mi_init_done_t() {
-      _mi_auto_process_init();
+      //_mi_auto_process_init();
     }
     ~mi_init_done_t() {
-      _mi_auto_process_done();
+      //_mi_auto_process_done();
     }
   };
   static mi_init_done_t mi_init_done;
