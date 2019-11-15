@@ -655,10 +655,10 @@ static void NTAPI mi_win_main(PVOID module, DWORD reason, LPVOID reserved) {
   }
   #endif
   if (reason==DLL_PROCESS_ATTACH) {
-    _mi_process_load();
+    //_mi_process_load();
   }
   else if (reason==DLL_PROCESS_DETACH) {
-    _mi_process_done();
+    //mi_process_done();
   }
   else if (reason==DLL_THREAD_DETACH && !_mi_is_redirected()) {
     _mi_thread_done(NULL);
@@ -748,7 +748,7 @@ static void NTAPI mi_win_main(PVOID module, DWORD reason, LPVOID reserved) {
 
     static int mi_process_attach(void) {
       mi_win_main(NULL,DLL_PROCESS_ATTACH,NULL);
-      atexit(&_mi_process_done);
+      //atexit(&mi_process_done);
       return 0;
     }
     typedef int(*mi_crt_callback_t)(void);
