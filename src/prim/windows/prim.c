@@ -655,13 +655,13 @@ static void NTAPI mi_win_main(PVOID module, DWORD reason, LPVOID reserved) {
   }
   #endif
   if (reason==DLL_PROCESS_ATTACH) {
-    //_mi_process_load();
+    //mi_process_load();
   }
   else if (reason==DLL_PROCESS_DETACH) {
     //mi_process_done();
   }
   else if (reason==DLL_THREAD_DETACH && !_mi_is_redirected()) {
-    _mi_thread_done(NULL);
+    //_mi_thread_done(NULL);
   }
 }
 
@@ -777,7 +777,7 @@ static void NTAPI mi_win_main(PVOID module, DWORD reason, LPVOID reserved) {
   static void NTAPI mi_fls_done(PVOID value) {
     mi_heap_t* heap = (mi_heap_t*)value;
     if (heap != NULL) {
-      _mi_thread_done(heap);
+      //_mi_thread_done(heap);
       FlsSetValue(mi_fls_key, NULL);  // prevent recursion as _mi_thread_done may set it back to the main heap, issue #672
     }
   }
@@ -827,7 +827,7 @@ static void NTAPI mi_win_main(PVOID module, DWORD reason, LPVOID reserved) {
       mi_redirected = false;
     }
     else if (reason == DLL_THREAD_DETACH) {
-      _mi_thread_done(NULL);
+      //_mi_thread_done(NULL);
     }
   }
   __declspec(dllimport) bool mi_cdecl mi_allocator_init(const char** message);

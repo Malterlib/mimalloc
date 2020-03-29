@@ -39,7 +39,7 @@ terms of the MIT license. A copy of the license can be found in the file
     #define mi_attr_destructor  __attribute__((destructor))
   #endif
   static void mi_attr_constructor mi_process_attach(void) {
-    //_mi_process_load();
+    //mi_process_load();
   }
   static void mi_attr_destructor mi_process_detach(void) {
     //mi_process_done();
@@ -49,7 +49,7 @@ terms of the MIT license. A copy of the license can be found in the file
   // This is not guaranteed to be first/last but the best we can generally do?
   struct mi_init_done_t {
     mi_init_done_t() {
-      //_mi_process_load();
+      //mi_process_load();
     }
     ~mi_init_done_t() {
      //_mi_process_done();
@@ -57,7 +57,7 @@ terms of the MIT license. A copy of the license can be found in the file
   };
   static mi_init_done_t mi_init_done;
  #else
-  #pragma message("define a way to call _mi_process_load/done on your platform")
+  #pragma message("define a way to call mi_process_load/done on your platform")
 #endif
 #endif
 
