@@ -215,6 +215,7 @@ mi_decl_export void mi_process_info(size_t* elapsed_msecs, size_t* user_msecs, s
 
 
 // Generally do not use the following as these are usually called automatically
+mi_decl_export void mi_process_load(void)     mi_attr_noexcept;
 mi_decl_export void mi_process_init(void)     mi_attr_noexcept;
 mi_decl_export void mi_cdecl mi_process_done(void) mi_attr_noexcept;
 mi_decl_export void mi_thread_init(void)      mi_attr_noexcept;

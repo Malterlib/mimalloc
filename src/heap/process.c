@@ -478,7 +478,9 @@ mi_decl_noinline static void mi_tld_free(mi_tld_t* tld) {
   Thread Init
 ----------------------------------------------------------- */
 
-#if MI_DEBUG || defined(MI_TLS_RECURSE_GUARD)
+// Malterlib: not on Windows, where the thread done hooks are disabled (see `prim/windows/prim.c`): the theap
+// of an ended thread stays in its heap there, with a thread id that a later thread gets.
+#if (MI_DEBUG || defined(MI_TLS_RECURSE_GUARD)) && !defined(_WIN32)
 static mi_theap_t* mi_heap_check_for_existing_theap(mi_heap_t* heap) {
   const mi_thread_id_t tid = _mi_thread_id();
   mi_theap_t* thread_theap = NULL;
@@ -515,7 +517,7 @@ mi_theap_t* _mi_thread_init_with_heap(mi_heap_t* heap_main)
   }
   mi_assert_internal(heap_main!=NULL);
 
-  #if MI_DEBUG || defined(MI_TLS_RECURSE_GUARD)
+  #if (MI_DEBUG || defined(MI_TLS_RECURSE_GUARD)) && !defined(_WIN32)
   theap = mi_heap_check_for_existing_theap(heap_main);  // recursion check
   #if !defined(MI_TLS_RECURSE_GUARD)
   mi_assert_internal(theap==NULL);
@@ -742,7 +744,7 @@ static void mi_auto_process_init_once(void) {
 }
 
 // Called by the process loader from `src/prim/prim.c` before `main` is called.
-void _mi_auto_process_init(void) {
+void mi_process_load(void) mi_attr_noexcept {
   mi_atomic_do_once {
     mi_auto_process_init_once();
   }
