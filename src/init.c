@@ -124,6 +124,7 @@ mi_decl_cache_align const mi_heap_t _mi_heap_empty = {
   0,                      // page count
   MI_BIN_FULL, 0,         // page retired min/max
   0,                      // generic count
+  0,                      // collect count
   NULL,                   // next
   0,                      // full page retain
   false,                  // can reclaim
@@ -161,6 +162,7 @@ mi_decl_cache_align mi_heap_t heap_main = {
   0,                      // page count
   MI_BIN_FULL, 0,         // page retired min/max
   0,                      // generic count
+  0,                      // collect count
   NULL,                   // next heap
   2,                      // full page retain
   true,                   // allow page reclaim

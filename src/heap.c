@@ -141,6 +141,19 @@ void mi_heap_collect(mi_heap_t* heap, bool force) mi_attr_noexcept {
   mi_heap_collect_ex(heap, (force ? MI_FORCE : MI_NORMAL));
 }
 
+// Malterlib extension: rate-limited owner-side collect. There is no owner notification for
+// cross-thread frees (they land on each page's `xthread_free` and are only seen when the owner
+// allocates from that page again), so callers that want to bound the backlog call this often and
+// every `count_mask+1`-th call runs a non-forced collect for the calling thread's heap.
+bool mi_collect_if_due(size_t count_mask) mi_attr_noexcept {
+  mi_heap_t* heap = mi_prim_get_default_heap();
+  if (heap==NULL || !mi_heap_is_initialized(heap)) return false;
+  heap->collect_count++;
+  if ((heap->collect_count & count_mask) != 0) return false;
+  mi_heap_collect(heap, false);
+  return true;
+}
+
 void mi_collect(bool force) mi_attr_noexcept {
   mi_heap_collect(mi_prim_get_default_heap(), force);
 }

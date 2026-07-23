@@ -148,6 +148,7 @@ typedef void (mi_cdecl mi_error_fun)(int err, void* arg);
 mi_decl_export void mi_register_error(mi_error_fun* fun, void* arg);
 
 mi_decl_export void mi_collect(bool force)    mi_attr_noexcept;
+mi_decl_export bool mi_collect_if_due(size_t count_mask) mi_attr_noexcept;  // Malterlib extension
 mi_decl_export int  mi_version(void)          mi_attr_noexcept;
 mi_decl_export void mi_stats_reset(void)      mi_attr_noexcept;
 mi_decl_export void mi_stats_merge(void)      mi_attr_noexcept;
