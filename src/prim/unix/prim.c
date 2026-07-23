@@ -598,8 +598,15 @@ size_t _mi_prim_numa_node_count(void) {
 #if defined(CLOCK_REALTIME) || defined(CLOCK_MONOTONIC)
 
 mi_msecs_t _mi_prim_clock_now(void) {
-  struct timespec t;
-  #ifdef CLOCK_MONOTONIC
+  struct timespec t = { 0, 0 };
+  #if defined(__linux__) && defined(SYS_clock_gettime)
+  // Use a raw syscall: mi_process_init can run from very early static constructors (Malterlib
+  // system malloc override) where the libc clock_gettime vDSO pointer is not yet initialized.
+  if (syscall(SYS_clock_gettime, CLOCK_MONOTONIC, &t) != 0) {
+    // The raw syscall can be blocked (e.g. by seccomp); fall back to the libc implementation
+    clock_gettime(CLOCK_MONOTONIC, &t);
+  }
+  #elif defined(CLOCK_MONOTONIC)
   clock_gettime(CLOCK_MONOTONIC, &t);
   #else
   clock_gettime(CLOCK_REALTIME, &t);
