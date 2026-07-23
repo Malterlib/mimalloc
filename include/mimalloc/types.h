@@ -724,6 +724,7 @@ struct mi_theap_s {
   size_t                pages_full_size;                     // optimization: total size of blocks in the pages of the full queue (issue #1220)
   long                  generic_count;                       // how often is `_mi_malloc_generic` called?
   long                  generic_collect_count;               // how often is `_mi_malloc_generic` called without collecting?
+  size_t                collect_count;                       // how often is `mi_collect_if_due` called? (Malterlib extension)
 
   // theaps belong to heaps and threads
   mi_theap_t*           tnext;                               // list of theaps in this thread

@@ -166,6 +166,7 @@ mi_decl_hidden mi_decl_cache_align const mi_theap_t _mi_theap_empty = {
   MI_BIN_FULL, 0,         // page retired min/max
   0,                      // pages_full_size
   0, 0,                   // generic count
+  0,                      // collect count
   NULL, NULL,             // tnext, tprev
   NULL, NULL,             // hnext, hprev
   MI_PAGE_QUEUES_EMPTY,

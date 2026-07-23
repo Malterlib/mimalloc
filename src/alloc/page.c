@@ -777,6 +777,13 @@ static void mi_theap_collect_special_pages(mi_page_queue_t* pq, bool force) {
   if (page != NULL) { mi_page_queue_rotate_to(pq, page); }
 }
 
+// Malterlib extension: collect all pages in the full queue that had blocks freed by other threads.
+// A non-forced collect only visits MI_FULL_COLLECT_MAX_PAGES of them, see `mi_collect_if_due`.
+void _mi_theap_collect_full_pages(mi_theap_t* theap) {
+  if (theap->allow_page_abandon) return;  // full pages were abandoned
+  mi_theap_collect_special_pages(&theap->pages[MI_BIN_FULL], true);
+}
+
 // Before allocating a fresh huge page, free huge pages whose block was freed by another thread.
 void _mi_theap_collect_huge_pages(mi_theap_t* theap) {
   _mi_heap_qsbr_collect_delayed(theap->heap);

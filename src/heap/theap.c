@@ -194,6 +194,22 @@ void mi_collect(bool force) mi_attr_noexcept {
   mi_theap_collect(_mi_theap_default(), force);
 }
 
+// Malterlib extension: rate-limited owner-side collect. There is no owner notification for
+// cross-thread frees (they land on each page's `xthread_free` and are only seen when the owner
+// allocates from that page again), so callers that want to bound the backlog call this often and
+// every `count_mask+1`-th call runs a non-forced collect for the calling thread's theap.
+// A non-forced collect leaves most of the full queue to later calls (issue #1220), where the frees of
+// other threads wait when the theap cannot abandon its full pages, so all of it is collected as well.
+bool mi_collect_if_due(size_t count_mask) mi_attr_noexcept {
+  mi_theap_t* theap = _mi_theap_default();
+  if (theap==NULL || !mi_theap_is_initialized(theap)) return false;
+  theap->collect_count++;
+  if ((theap->collect_count & count_mask) != 0) return false;
+  mi_theap_collect(theap, false);
+  _mi_theap_collect_full_pages(theap);
+  return true;
+}
+
 void mi_heap_collect(mi_heap_t* heap, bool force) {
   // cannot really collect a heap, just a theap..
   mi_theap_collect(mi_heap_theap(heap), force);
