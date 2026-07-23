@@ -110,6 +110,9 @@ terms of the MIT license. A copy of the license can be found in the file
   #define MI_HAS_SYSCALL_H
   #include <sys/syscall.h>
 #endif
+#if defined(__linux__) && !defined(__ANDROID__)
+  #include <linux/posix_types.h>  // __kernel_long_t
+#endif
 
 // MSan does not intercept raw syscalls, so memory they write must be marked as initialized
 #if defined(__has_feature)
@@ -1053,6 +1056,19 @@ mi_msecs_t _mi_prim_clock_now(void) {
     const clockid_t clockid = CLOCK_REALTIME;
     #endif
     struct timespec t;
+    #if defined(MI_HAS_SYSCALL_H) && defined(__linux__) && defined(SYS_clock_gettime)
+    // Use a raw syscall: mi_process_init can run from very early static constructors (Malterlib
+    // system malloc override) where the libc clock_gettime vDSO pointer is not yet initialized.
+    // The raw syscall can be blocked (e.g. by seccomp), so fall back to the libc implementation.
+    // The syscall fills in two kernel longs, which is not the timespec of a 32-bit libc with a 64-bit time_t.
+    {
+      __kernel_long_t kt[2];
+      if (syscall(SYS_clock_gettime, clockid, kt) == 0) {
+        mi_msan_unpoison(kt, sizeof(kt));
+        return ((mi_msecs_t)kt[0] * 1000) + ((mi_msecs_t)kt[1] / 1000000L);
+      }
+    }
+    #endif
     if (clock_gettime(clockid,&t) == 0) {
       return ((mi_msecs_t)t.tv_sec * 1000) + ((mi_msecs_t)t.tv_nsec / 1000000L);
     }
