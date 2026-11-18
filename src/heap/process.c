@@ -187,6 +187,11 @@ mi_decl_hidden mi_decl_process_align mi_process_t _mi_process = mi_init_struct_z
 // The sealed lock is static as it can be used before process initialization (and a zero lock is invalid on some platforms)
 static mi_lock_t mi_sealed_lock = MI_LOCK_INITIALIZER;
 
+// Malterlib extension: take the sealed lock afresh in the child of a fork (see `mi_process_forked_child`).
+void _mi_process_sealed_fork_child(void) {
+  mi_lock_init(&mi_sealed_lock);
+}
+
 // Make the sealed process data writable; this takes the sealed lock until `_mi_process_seal`.
 mi_process_sealed_t* _mi_process_unseal(void) {
   mi_lock_acquire(&mi_sealed_lock);

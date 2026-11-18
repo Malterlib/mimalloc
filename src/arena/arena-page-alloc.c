@@ -136,7 +136,8 @@ static size_t mi_page_block_cache_offset(uint8_t* slice_start, size_t slice_coun
 // Also determines the offset of the first block.
 static mi_page_t* mi_page_meta_select(uint8_t* slice_start, size_t slice_count, mi_page_t* page_meta, size_t block_size, bool os_align,
                                       mi_page_guards_t* guards, size_t* block_start) {
-  mi_assert_internal(page_meta == NULL || page_meta->block_size == 0);
+  // (Malterlib: in a torn forked child, the meta data of free slices may still be that of a page that was freed during the fork)
+  mi_assert_internal(page_meta == NULL || page_meta->block_size == 0 || _mi_fork_is_torn());
   mi_page_t* page;
   size_t offset;
   if (page_meta == NULL
@@ -501,7 +502,7 @@ static void mi_arenas_page_link_aligned_meta(mi_page_t* page, uint8_t* slice_sta
     // (note: the entries of adjacent slices are not adjacent, see `mi_page_meta_aligned_index`)
     for(size_t i = 1; i < max_page_meta_count; i++) {
       mi_page_t* const meta = mi_page_meta_load(mi_aligned_ptr_page0(slice_start + _mi_size_of_slices(i)));
-      mi_assert_internal(meta->block_size == 0);
+      mi_assert_internal(meta->block_size == 0 || _mi_fork_is_torn());
       mi_atomic_store_ptr_release(mi_page_t,&meta->self,page);
     }
   }

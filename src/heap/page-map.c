@@ -373,3 +373,10 @@ mi_page_t* _mi_safe_ptr_page(const void* p) {
 mi_decl_nodiscard mi_decl_export bool mi_is_in_heap_region(const void* p) mi_attr_noexcept {
   return (_mi_safe_ptr_page(p) != NULL);
 }
+
+
+// Malterlib extension: take the lock afresh in the child of a fork (see `mi_process_forked_child`).
+void _mi_page_map_fork_child(void) {
+  mi_page_map_t* const pmap = mi_page_map();
+  if (pmap != NULL) { mi_lock_init(&pmap->lock); }
+}

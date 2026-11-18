@@ -374,6 +374,10 @@ bool _mi_fork_is_torn(void) {
   return _mi_process.fork.torn;
 }
 
+bool _mi_fork_keeps_abandoned(void) {
+  return _mi_process.fork.keep_abandoned;
+}
+
 static bool mi_fork_theap_is_dead(const mi_theap_t* theap) {
   const mi_tld_t* const tld = theap->tld;
   return (tld != NULL && tld->thread_id != MI_THREAD_ID_DETACHED && tld->fork_epoch != _mi_process.fork.epoch);
@@ -476,6 +480,104 @@ void _mi_fork_child(void) {
   mi_theap_t* const theap = _mi_theap_default();
   if (mi_theap_is_initialized(theap)) { theap->tld->fork_epoch = _mi_process.fork.epoch; }  // the forking thread survives
   mi_atomic_store_release(&_mi_process.fork.pending, 1);
+}
+
+// A lock that another thread held when the process forked stays locked in the child, where that
+// thread is gone. Threads take locks when they start and end, as for the list of the theaps of a
+// heap, so the child takes its locks afresh. What a lock protected can be in the middle of a change.
+// The locks of the one-time initializations (`_mi_atomic_once_enter`, `_mi_pthread_key_create`) are
+// left as they are.
+static void mi_fork_child_reinit_locks(void) {
+  mi_lock_init(&_mi_process.subprocs_lock);
+  mi_lock_init(&_mi_process.thread_locals_lock);
+  _mi_process_sealed_fork_child();
+  _mi_page_map_fork_child();
+  _mi_options_fork_child();
+  for (mi_subproc_t* subproc = (mi_subproc_t*)mi_meta_load_maybe(mi_process_get_sealed()->subprocs); subproc != NULL; subproc = subproc->next) {
+    mi_lock_init(&subproc->arena_reserve_lock);
+    mi_lock_init(&subproc->heaps_lock);
+    mi_lock_init(&subproc->theap_meta_lock);
+    for (mi_heap_t* heap = subproc->heaps; heap != NULL; heap = heap->next) {
+      mi_lock_init(&heap->theaps_lock);
+      mi_lock_init(&heap->os_abandoned_pages_lock);
+      mi_lock_init(&heap->arena_pages_lock);
+      #if MI_QSBR
+      mi_lock_init(&heap->qsbr_delayed_lock);
+      #endif
+    }
+  }
+  mi_theap_t* const theap = _mi_theap_default();
+  if (mi_theap_is_initialized(theap)) { mi_lock_init(&theap->tld->theaps_lock); }
+}
+
+static void mi_fork_child_relink_theap(mi_theap_t* theap) {
+  mi_heap_t* const heap = mi_theap_heap_peek(theap);
+  if (heap == NULL) return;
+  theap->hprev = NULL;
+  theap->hnext = heap->theaps;
+  if (heap->theaps != NULL) { heap->theaps->hprev = theap; }
+  heap->theaps = theap;
+}
+
+// The theaps of the threads that are gone leave the lists of the theaps of the heaps, which threads
+// change as they start and end: such a list can link a theap that its thread was freeing. The lists
+// become those of the theaps that the child has: of the forking thread, and for the meta data.
+static void mi_fork_child_reset_theaps(void) {
+  for (mi_subproc_t* subproc = (mi_subproc_t*)mi_meta_load_maybe(mi_process_get_sealed()->subprocs); subproc != NULL; subproc = subproc->next) {
+    for (mi_heap_t* heap = subproc->heaps; heap != NULL; heap = heap->next) {
+      heap->theaps = NULL;
+    }
+  }
+  for (mi_subproc_t* subproc = (mi_subproc_t*)mi_meta_load_maybe(mi_process_get_sealed()->subprocs); subproc != NULL; subproc = subproc->next) {
+    if (subproc->theap_meta != NULL) { mi_fork_child_relink_theap(subproc->theap_meta); }
+  }
+  mi_theap_t* const theap = _mi_theap_default();
+  if (mi_theap_is_initialized(theap)) {
+    for (mi_theap_t* t = theap->tld->theaps; t != NULL; t = t->tnext) { mi_fork_child_relink_theap(t); }
+  }
+}
+
+// Malterlib extension: for a host that forwards its own fork handling and builds with
+// MI_NO_PTHREAD_ATFORK. It calls this in the child process right after a fork, before the child
+// allocates.
+// This is best effort, and deliberately no more: a child only has to work as well as with the
+// handler of upstream, which supports a child that keeps allocating only when the other threads were
+// stopped outside mimalloc. There is no call for before the fork, or for the parent, that takes the
+// locks around the fork, so the child can find what a lock protected in the middle of a change, and
+// a fork while other threads allocate, start or end is not expected to always give a working child.
+// The host does not stop its other threads at a safe point outside mimalloc for the fork,
+// and its children keep allocating, so the child must not use what those threads can have been
+// changing when the process forked. The handler of upstream (`_mi_fork_child`) abandons the pages of
+// those threads, and finds them inconsistent. Here they are not touched: they leak in the child,
+// and the theaps of those threads leave their heaps. The fork epoch still marks the threads as gone.
+// The child also leaves abandoned pages as they are for as long as it runs, as those threads free
+// into them, collect them and reclaim them: it can find one in the middle of that, where a free
+// waits for the thread that had it (`mi_bitmap_clear_once_set`), and on macOS with free lists that
+// are torn. Allocation doesn't reclaim an abandoned page (`_mi_arenas_page_try_find_abandoned`), a
+// free in one only pushes its block (`mi_free_block_mt`), and theaps keep their full pages rather
+// than abandon them. So the child reads the free lists only of the pages that the forking thread
+// owned, of the pages that it allocates itself, and of the pages for the meta data, which threads
+// allocate under a lock. The pages that a thread of the child leaves behind when it ends are not
+// reclaimed either.
+// On macOS, where the child can see a torn snapshot, the thread free lists of the pages of the
+// forking thread are dropped as well, which upstream does from its malloc zone, which is not there
+// without MI_OVERRIDE.
+void mi_process_forked_child(void) mi_attr_noexcept {
+  mi_fork_child_reinit_locks();
+  mi_fork_child_reset_theaps();
+  #if defined(__APPLE__)
+  _mi_fork_child_zone();
+  mi_fork_child_resume_reclaim();  // the counts stay those of the abandoned maps, which nothing takes pages from
+  #endif
+  _mi_process.fork.keep_abandoned = true;
+  _mi_process.fork.epoch++;
+  mi_theap_t* const theap = _mi_theap_default();
+  if (mi_theap_is_initialized(theap)) {
+    mi_tld_t* const tld = theap->tld;
+    tld->fork_epoch = _mi_process.fork.epoch;  // the forking thread survives
+    theap->allow_page_abandon = false;
+    for (mi_theap_t* t = tld->theaps; t != NULL; t = t->tnext) { t->allow_page_abandon = false; }
+  }
 }
 
 // Called at process initialization.

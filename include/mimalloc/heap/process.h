@@ -32,6 +32,7 @@ typedef struct mi_fork_state_s {
   size_t              epoch;                    // incremented in the child at every fork
   _Atomic(size_t)     pending;                  // set in the child until the dead theaps are abandoned
   bool                torn;                     // set in a child that may have a torn snapshot of memory (on macOS)
+  bool                keep_abandoned;           // Malterlib: set in a child that leaves abandoned pages as they are (see `mi_process_forked_child`)
   mi_heap_t*          suspended_heap;           // heap with suspended abandoned reclaim (on macOS)
   size_t              suspended_count[MI_BIN_COUNT];  // and its abandoned counts
 } mi_fork_state_t;
@@ -260,6 +261,7 @@ static inline bool _mi_theap_is_unavailable(const mi_theap_t* theap) {
 // Make the sealed process data writable (and take a lock); must be followed by `_mi_process_seal`.
 mi_process_sealed_t* _mi_process_unseal(void);
 void                 _mi_process_seal(void);
+void                 _mi_process_sealed_fork_child(void);  // Malterlib extension
 
 // Set or get a callback function and argument pair in the sealed process data (as a consistent pair).
 void  _mi_process_set_callback(const _Atomic(void*)* pfun, const _Atomic(void*)* parg, void* fun, void* arg);

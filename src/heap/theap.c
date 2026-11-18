@@ -18,6 +18,7 @@ terms of the MIT license. A copy of the license can be found in the file
 #include "mimalloc/profile/sample-profile.h"
 #include "mimalloc/heap/heap.h"
 #include "mimalloc/heap/theap.h"
+#include "mimalloc/heap/subproc.h"      // _mi_fork_keeps_abandoned
 
 #if defined(_MSC_VER) && (_MSC_VER < 1920)
 #pragma warning(disable:4204)  // non-constant aggregate initializer
@@ -245,7 +246,7 @@ mi_theap_t* mi_theap_set_default(mi_theap_t* theap) {
 
 static void mi_theap_options_init(mi_theap_t* theap, mi_heap_t* heap) {
   theap->allow_page_reclaim = (mi_heap_reclaim_on_free(heap) >= 0);
-  theap->allow_page_abandon = (mi_option_get(mi_option_page_full_retain) >= 0); // nowadays qsbr pages can be abandoned: && !mi_heap_qsbr_is_enabled(heap));
+  theap->allow_page_abandon = (mi_option_get(mi_option_page_full_retain) >= 0 && !_mi_fork_keeps_abandoned()); // nowadays qsbr pages can be abandoned: && !mi_heap_qsbr_is_enabled(heap));
   theap->page_full_retain = mi_option_get_clamp(mi_option_page_full_retain, -1, 32);
   theap->is_detached = (theap->tld->thread_id == MI_THREAD_ID_DETACHED);
 }

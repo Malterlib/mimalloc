@@ -424,6 +424,11 @@ static void mi_cdecl mi_out_stderr(const char* msg, void* arg) {
 // and a zero lock is invalid on some platforms.
 static mi_lock_t out_buf_lock = MI_LOCK_INITIALIZER;
 
+// Malterlib extension: take the lock afresh in the child of a fork (see `mi_process_forked_child`).
+void _mi_options_fork_child(void) {
+  mi_lock_init(&out_buf_lock);
+}
+
 static void mi_cdecl mi_out_buf(const char* msg, void* arg) {
   MI_UNUSED(arg);
   if (msg==NULL) return;

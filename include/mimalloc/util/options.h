@@ -18,6 +18,7 @@ void  _mi_verbose_message(const char* fmt, ...);
 void  _mi_trace_message(const char* fmt, ...);
 void  _mi_options_init(void);
 void  _mi_options_post_init(void);
+void  _mi_options_fork_child(void);  // Malterlib extension
 long  _mi_option_get_fast(mi_option_t option);
 void  _mi_error_message(int err, const char* fmt, ...);
 mi_decl_noreturn mi_decl_cold void _mi_fatal_error(const char* fmt, ...);  // always shown, then aborts

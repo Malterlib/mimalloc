@@ -15,6 +15,7 @@ terms of the MIT license. A copy of the license can be found in the file
 #include "../prim/prim-pac.h"
 
 bool          _mi_page_map_init(void);
+void          _mi_page_map_fork_child(void);  // Malterlib extension
 mi_decl_nodiscard bool _mi_page_map_register(mi_page_t* page);
 void          _mi_page_map_unregister(mi_page_t* page);
 void          _mi_page_map_unregister_range(void* start, size_t size);

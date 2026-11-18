@@ -18,6 +18,7 @@ terms of the MIT license. A copy of the license can be found in the file
 #include "mimalloc/alloc/page.h"
 #include "mimalloc/alloc/free.h"
 #include "mimalloc/heap/heap.h"
+#include "mimalloc/heap/subproc.h"             // _mi_fork_keeps_abandoned
 
 
 // forward declarations
@@ -151,6 +152,9 @@ void mi_free_block_mt(mi_page_t* page, mi_block_t* block, bool was_guarded, bool
   if (is_newly_owned) {
     mi_assert_internal(mi_page_is_abandoned(page));
     // mi_assert_internal(!mi_page_is_abandoned_mapped(page));
+    // Malterlib: a forked child that keeps abandoned pages as they are leaves the page owned, by no thread,
+    // so that nothing reads its free lists (see `mi_process_forked_child`)
+    if mi_unlikely(_mi_fork_keeps_abandoned()) return;
     mi_free_try_collect_mt(page, block, allow_reclaim);
   }
 }

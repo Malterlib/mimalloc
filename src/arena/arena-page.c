@@ -232,6 +232,9 @@ mi_page_t* _mi_arenas_page_try_find_abandoned(mi_theap_t* theap, size_t slice_co
   if (mi_atomic_load_relaxed(&heap->abandoned_count[bin]) == 0) {
     return NULL;
   }
+  if mi_unlikely(_mi_fork_keeps_abandoned()) {
+    return NULL;  // Malterlib: see `mi_process_forked_child`
+  }
 
   // search arena's
   const bool allow_large = true;
